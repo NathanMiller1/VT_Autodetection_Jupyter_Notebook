@@ -34,6 +34,13 @@ class MetabolicTest:
         if 'Phase' in self.raw_df.columns:
             self.raw_df = self.raw_df[self.raw_df['Phase'].astype(str).str.contains('Exercise', case=False, na=False)].copy()
         
+        # Find RER cutoff VO2 from time-ordered data (before VO2 sort): i.e., last point point where RER < 1.0
+        self.rer_cutoff_vo2 = None
+        if 'RER' in self.raw_df.columns:
+            below_one = self.raw_df[self.raw_df['RER'] < 1.0]
+            if not below_one.empty:
+                self.rer_cutoff_vo2 = below_one.iloc[-1]['VO2']                                                               
+        
         # Sort by VO2
         self.raw_df = self.raw_df.sort_values(by="VO2", ascending=True).reset_index(drop=True)
 
@@ -42,7 +49,7 @@ class MetabolicTest:
             min_rer_idx = self.raw_df['RER'].idxmin()
             self.raw_df = self.raw_df.loc[min_rer_idx:].reset_index(drop=True)
             if which_vt == 'vt1':
-                self.raw_df = self.raw_df[self.raw_df['RER'] <= 1.05].reset_index(drop=True)
+                self.raw_df = self.raw_df[self.raw_df['RER'] <= 1.07].reset_index(drop=True)
         
         # Calculate excess CO2 and excess VE
         self.raw_df['excess_co2'] = self.raw_df["VCO2"]**2 / (self.raw_df["VO2"] + 1e-8) - self.raw_df["VCO2"]
@@ -162,7 +169,10 @@ def process_single_task(task_args):
     elif x_col == "high_rer_mask":
         method_name = f"High_RER_{y_col}_Mask"
         res_df = tester.raw_df.copy()
-        res_df['error'] = (res_df['RER'] > float(y_col)).astype(float)
+        if tester.rer_cutoff_vo2 is not None:
+            res_df['error'] = (res_df['VO2'] > tester.rer_cutoff_vo2).astype(float)
+        else:
+            res_df['error'] = 0.0
     
     elif x_col == "fat_max_mask":
         method_name = "FatMax_Mask"

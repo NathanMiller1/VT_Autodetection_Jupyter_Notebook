@@ -1,9 +1,12 @@
 .ipynb_checkpoints/
 __pycache__/
 Data/
+VT1_Bayesian_Plots/
 VT1_Plots/
 VT2_Plots/
 *.py[cod]
+bayesian_vt1_ranked_combinations.csv
+vt1_bayesian_threshold_points.csv
 vt1_error_values.csv
 vt1_ranked_combinations.csv
 vt1_threshold_points.csv
