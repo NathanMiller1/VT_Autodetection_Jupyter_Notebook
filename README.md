@@ -1,5 +1,5 @@
 # CPET Data Processing & Bayesian Ensemble Framework
-This Jupyter notebook (`get_data_multi_process.ipynb`) provides a pipeline for the automated detection of VT1 and VT2 from Cardiopulmonary Exercise Test (CPET) data. It facilitates batch data acquisition, multi-method error calculation, and identification of thresholds using a simple average ensemble approach and a Bayesian ensemble approach.
+This Jupyter notebook (`get_data_multi_process.ipynb`) provides a pipeline for the automated detection of Ventilatory Thresholds (VT1 and VT2) from Cardiopulmonary Exercise Test (CPET) data. It leverages a weighted product of experts model with smoothing and temperature control to synthesize multiple physiological indicators into a unified probabilistic estimate.
 
 ## Notebook Sections
 
@@ -8,7 +8,7 @@ Implements a data loading pipeline utilizing `multiprocessing`. This section han
 * **Scans a directory for CPET Excel files**
 * **Parallel Processing** 
 
-### 2. & 3. Single Method Error Calculations and Average Ensemble
+### 2. & 3. Single Method Error Calculations and Average MSE Ensemble
 These sections calculate residuals for the following VT1 indicators:
 * **V-Slope (Beaver 1986)**
 * **VCO2 vs. VO2**
@@ -19,20 +19,22 @@ These sections calculate residuals for the following VT1 indicators:
 * **RER Mask**
 
 ### 4. VT2 Estimates
-These sections calculate residuals for the following VT2 indicators:
+This section calculate residuals for the following VT2 indicators:
 * **VE/VCO2 vs. VO2**
 * **PetCO2 vs. VO2**
 
-### 5. Bayesian Weighted Ensemble
-This section utilizes a **Bayesian ensemble framework** to combine evidence from the (assumed) independent physiological indicators into a single posterior probability distribution.
-* **Maximum A Posteriori (MAP):** The VO2 at the peak of the posterior distribution.
-* **Posterior Mean:** The probability-weighted centroid of the distribution, offering robustness against skewed or bimodal data.
-* **90% Credible Interval:** Derived from the 5th and 95th percentiles of the cumulative distribution function (CDF) to quantify identification uncertainty.
+### 5. Weighted Product of Experts Ensemble
+Instead of a simple average, this section treats each VT1 estimation method as an "expert" and combines their "opinions" into a single probability distribution.
 
-#### Mathematical Foundation
-* **Likelihood Transformation (Murphy 8.4.1):** Transforms normalized segmented-regression errors into likelihoods using an exponential energy function: $L(i) = \\exp(-k \\cdot \\text{error}(i))$.
-* **Log-Sum-Exp Trick (Murphy 3.5.3):** Ensures numerical stability during exponentiation and normalization. By identifying $B = \\max(b\_c)$, the framework computes $\\exp(b\_c - B)$ to prevent numerical underflow, ensuring a valid denominator for the probability distribution.
-* **Product of Experts:** The log-posterior is computed as a weighted sum of log-likelihoods.
+#### Key Features:
+* **Softmax with Temperature ($T$): Controls the "sharpness" of the distribution. A lower temperature favors consensus and results in more peaked distributions, while higher temperatures allow for more uncertainty.Signal 
+* **Signal Smoothing: Implements Gaussian and Rolling-Window kernels for both individual expert errors and the final combined posterior to reduce high-frequency noise.
+* **Product of Experts (PoE) Logic: Log-probabilities are summed (equivalent to multiplying probabilities), ensuring that if one highly-weighted expert identifies a region as "impossible" (zero probability), it is excluded from the final consensus.
+
+#### Statistical Outputs:
+* **Maximum A Posteriori (MAP):** The VO2 at the peak of the distribution.
+* **Posterior Mean:** The probability-weighted centroid of the distribution, providing a stable estimate in bimodal or noisy scenarios.
+* **90% Credible Interval:** Derived from the 5th and 95th percentiles of the cumulative distribution function (CDF) to quantify identification uncertainty.
 
 ### 6. Result Visualization
 Generates visualizations of the metabolic data overlaid with the calculated posterior distributions and identified breakpoints.
